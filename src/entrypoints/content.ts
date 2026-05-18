@@ -140,7 +140,7 @@ function walkMarkup(el: Element, lines: string[], seen: Set<string>, depth: numb
   let text = '';
   for (const node of el.childNodes) { if (node.nodeType === Node.TEXT_NODE) text += node.textContent || ''; }
   const tt = text.trim();
-  if (tt && tt.length > 1 && tt.length < 500 && !seen.has(tt)) {
+  if (tt && tt.length > 1 && !seen.has(tt)) {
     seen.add(tt);
     if (el.children.length === 0 || tt.length > 20) lines.push(tt);
   }
