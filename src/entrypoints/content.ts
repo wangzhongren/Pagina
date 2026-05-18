@@ -64,7 +64,7 @@ function extractPageText(): string {
     if (l.length > 100) return true;
     if (seen.has(l)) return false;
     seen.add(l); return true;
-  }).slice(0, 100000).join('\n');
+  }).join('\n');
 }
 
 function elementToMarkup(el: HTMLElement, seen: Set<string>): string {
@@ -241,7 +241,7 @@ function onDragUp(e: MouseEvent): void {
   stopSelect();
   browser.runtime.sendMessage({
     type: MessageTypes.DOM_SELECTED,
-    payload: { text: sanitizeText(parts.join('\n---\n')).slice(0, 20000) },
+    payload: { text: sanitizeText(parts.join('\n---\n')) },
   }).catch(() => {});
 }
 
