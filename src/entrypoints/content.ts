@@ -74,7 +74,7 @@ function elementToMarkup(el: HTMLElement, seen: Set<string>): string {
 }
 
 function walkMarkup(el: Element, lines: string[], seen: Set<string>, depth: number): void {
-  if (depth > 12) return;
+  if (depth > 25) return;
   const style = getComputedStyle(el);
   if (style.display === 'none' || style.visibility === 'hidden') return;
   const tag = el.tagName;
@@ -142,7 +142,7 @@ function walkMarkup(el: Element, lines: string[], seen: Set<string>, depth: numb
   const tt = text.trim();
   if (tt && tt.length > 1 && tt.length < 500 && !seen.has(tt)) {
     seen.add(tt);
-    if (el.children.length === 0) lines.push(tt);
+    if (el.children.length === 0 || tt.length > 20) lines.push(tt);
   }
 }
 
