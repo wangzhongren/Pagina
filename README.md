@@ -148,6 +148,3 @@ if (raw.startsWith(fullText)) {
 
 ---
 
-## License
-
-MIT
