@@ -67,6 +67,85 @@ function extractPageText(): string {
   }).slice(0, 100000).join('\n');
 }
 
+function elementToMarkup(el: HTMLElement, seen: Set<string>): string {
+  const lines: string[] = [];
+  walkMarkup(el, lines, seen, 0);
+  return lines.join('\n');
+}
+
+function walkMarkup(el: Element, lines: string[], seen: Set<string>, depth: number): void {
+  if (depth > 12) return;
+  const style = getComputedStyle(el);
+  if (style.display === 'none' || style.visibility === 'hidden') return;
+  const tag = el.tagName;
+
+  // 图片
+  if (tag === 'IMG') {
+    const img = el as HTMLImageElement;
+    const src = img.src || img.getAttribute('data-src') || '';
+    if (src && img.naturalWidth >= 60 && img.naturalHeight >= 60
+      && !/icon|logo|avatar|btn|star|arrow/.test((img.className + (img.getAttribute('alt') || '')).toLowerCase())) {
+      const key = `![img](${src})`;
+      if (!seen.has(key)) { seen.add(key); lines.push(key); }
+    }
+    return;
+  }
+
+  // 表格 → Markdown 表格
+  if (tag === 'TABLE') {
+    const rows: string[][] = [];
+    for (const tr of el.querySelectorAll('tr')) {
+      const cells: string[] = [];
+      for (const td of tr.querySelectorAll('td, th')) cells.push((td.textContent || '').trim().replace(/\n/g, ' ').slice(0, 80));
+      if (cells.length) rows.push(cells);
+    }
+    if (rows.length >= 2) {
+      const colCount = Math.max(...rows.map((r) => r.length));
+      const header = rows[0].map((c) => `**${c}**`);
+      lines.push('| ' + header.join(' | ') + ' |');
+      lines.push('|' + header.map(() => '---').join('|') + '|');
+      for (const row of rows.slice(1, 20)) lines.push('| ' + row.join(' | ') + ' |');
+      return;
+    }
+  }
+
+  // 列表
+  if (tag === 'UL' || tag === 'OL') {
+    for (const li of el.querySelectorAll(':scope > li')) {
+      const t = li.textContent?.trim().slice(0, 200);
+      if (t) lines.push(`${tag === 'OL' ? '1.' : '-'} ${t}`);
+    }
+    return;
+  }
+
+  // 标题
+  const m = tag.match(/^H([1-6])$/);
+  if (m) {
+    const t = el.textContent?.trim().slice(0, 200);
+    if (t) lines.push(`${'#'.repeat(parseInt(m[1]))} ${t}`);
+    return;
+  }
+
+  // 链接
+  if (tag === 'A') {
+    const href = (el as HTMLAnchorElement).href;
+    const t = el.textContent?.trim();
+    if (t && href && !href.startsWith('javascript:')) { lines.push(`[${t.slice(0, 100)}](${href})`); return; }
+  }
+
+  // 递归子元素
+  for (const child of el.children) walkMarkup(child, lines, seen, depth + 1);
+
+  // 叶节点文本
+  let text = '';
+  for (const node of el.childNodes) { if (node.nodeType === Node.TEXT_NODE) text += node.textContent || ''; }
+  const tt = text.trim();
+  if (tt && tt.length > 1 && tt.length < 500 && !seen.has(tt)) {
+    seen.add(tt);
+    if (el.children.length === 0) lines.push(tt);
+  }
+}
+
 function sanitizeText(text: string): string {
   return text
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '')
@@ -155,8 +234,8 @@ function onDragUp(e: MouseEvent): void {
   const parts: string[] = [];
   const seen = new Set<string>();
   for (const el of found) {
-    const t = (el as HTMLElement).innerText?.trim();
-    if (t && !seen.has(t)) { seen.add(t); parts.push(t); }
+    const markup = elementToMarkup(el as HTMLElement, seen);
+    if (markup) parts.push(markup);
   }
 
   stopSelect();
